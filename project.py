@@ -85,3 +85,22 @@ from unsloth import standardize_sharegpt
 pubmedqa_dataset = standardize_sharegpt(pubmedqa_dataset)
 medquad_dataset = standardize_sharegpt(medquad_dataset)
 legalqaeval_dataset = standardize_sharegpt(legalqaeval_dataset)
+
+##Apply chat template
+chat_template = """Below is a question. Write a response that correctly answers the question.
+
+### Question:
+{INPUT}
+
+### Response:
+{OUTPUT}"""
+
+from unsloth import apply_chat_template
+
+def apply_chat_template_dynamic(dataset, tokenizer, chat_template):
+  return apply_chat_template(
+    dataset,
+    tokenizer = tokenizer,
+    chat_template = chat_template,
+    # default_system_message = "You are a helpful assistant", << [OPTIONAL]
+)

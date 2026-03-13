@@ -503,7 +503,7 @@ def train_and_evaluate(model, dataset,output_adapter_name, qlora, ft_type, datas
   plot_percentage_improvements(metrics, model, ft_type, dataset_str)
 
 ## Start training
-## QLoRA First
+## QLoRA 
 train_and_evaluate("unsloth/Phi-3-mini-4k-instruct-bnb-4bit", pubmedqa_dataset, "phi3_qlora_pubmedqa",True,"QLoRA", "PubMedQA" )
 train_and_evaluate("unsloth/Phi-3-mini-4k-instruct-bnb-4bit", medquad_dataset, "phi3_qlora_medquad",True,"QLoRA", "MedQUAD" )
 train_and_evaluate("unsloth/Phi-3-mini-4k-instruct-bnb-4bit", legalqaeval_dataset, "phi3_qlora_legalqaeval",True, "QLoRA", "LegalQAEval")
@@ -513,3 +513,14 @@ train_and_evaluate("unsloth/llama-3-8b-Instruct-bnb-4bit", legalqaeval_dataset, 
 train_and_evaluate("unsloth/mistral-7b-instruct-v0.3-bnb-4bit", pubmedqa_dataset, "mistral_qlora_pubmedqa",True, "QLoRA", "PubMedQA")
 train_and_evaluate("unsloth/mistral-7b-instruct-v0.3-bnb-4bit", medquad_dataset, "mistral_qlora_medquad",True, "QLoRA", "MedQUAD")
 train_and_evaluate("unsloth/mistral-7b-instruct-v0.3-bnb-4bit", legalqaeval_dataset, "mistral_qlora_legalqaeval",True, "QLoRA", "LegalQAEval")
+
+##LoRA
+train_and_evaluate("unsloth/Phi-3-mini-4k-instruct", pubmedqa_dataset, "phi3_lora_pubmedqa",False, "LoRA", "PubMedQA")
+train_and_evaluate("unsloth/Phi-3-mini-4k-instruct", medquad_dataset, "phi3_lora_medquad",False, "LoRA", "MedQUAD")
+train_and_evaluate("unsloth/Phi-3-mini-4k-instruct", legalqaeval_dataset, "phi3_lora_legalqaeval",False, "LoRA", "LegalQAEval")
+train_and_evaluate("unsloth/llama-3-8b-Instruct", pubmedqa_dataset, "llama3_lora_pubmedqa",False, "LoRA", "PubMedQA")
+train_and_evaluate("unsloth/llama-3-8b-Instruct", medquad_dataset, "llama3_lora_medquad", False, "LoRA", "MedQUAD")
+train_and_evaluate("unsloth/llama-3-8b-Instruct", legalqaeval_dataset, "llama3_lora_legalqaeval", False, "LoRA", "LegalQAEval")
+train_and_evaluate("unsloth/mistral-7b-instruct-v0.3-bnb-4bit", pubmedqa_dataset, "mistral_lora_pubmedqa",False, "LoRA", "PubMedQA")
+train_and_evaluate("unsloth/mistral-7b-instruct-v0.3-bnb-4bit", medquad_dataset, "mistral_lora_medquad",False, "LoRA", "MedQUAD")
+train_and_evaluate("unsloth/mistral-7b-instruct-v0.3-bnb-4bit", legalqaeval_dataset, "mistral_lora_legalqaeval",False, "LoRA", "LegalQAEval")

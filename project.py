@@ -495,9 +495,21 @@ def train_domain_expert(model, dataset, output_adapter_name, qlora ):
     print(f"--- Finished {output_adapter_name}. VRAM cleared! ---")
     return metrics
 
-##function to train and print metrics 
+## Function to train and print metrics 
 def train_and_evaluate(model, dataset,output_adapter_name, qlora, ft_type, dataset_str ):
   metrics = train_domain_expert(model, dataset, output_adapter_name, qlora)
   print_metrics(metrics, model, ft_type, dataset_str)
   plot_metrics_comparison(metrics, model, ft_type, dataset_str)
   plot_percentage_improvements(metrics, model, ft_type, dataset_str)
+
+## Start training
+## QLoRA First
+train_and_evaluate("unsloth/Phi-3-mini-4k-instruct-bnb-4bit", pubmedqa_dataset, "phi3_qlora_pubmedqa",True,"QLoRA", "PubMedQA" )
+train_and_evaluate("unsloth/Phi-3-mini-4k-instruct-bnb-4bit", medquad_dataset, "phi3_qlora_medquad",True,"QLoRA", "MedQUAD" )
+train_and_evaluate("unsloth/Phi-3-mini-4k-instruct-bnb-4bit", legalqaeval_dataset, "phi3_qlora_legalqaeval",True, "QLoRA", "LegalQAEval")
+train_and_evaluate("unsloth/llama-3-8b-Instruct-bnb-4bit", pubmedqa_dataset, "llama3_qlora_pubmedqa",True, "QLoRA", "PubMedQA")
+train_and_evaluate("unsloth/llama-3-8b-Instruct-bnb-4bit", medquad_dataset, "llama3_qlora_medquad", True, "QLoRA", "MedQUAD")
+train_and_evaluate("unsloth/llama-3-8b-Instruct-bnb-4bit", legalqaeval_dataset, "llama3_qlora_legalqaeval", True, "QLoRA", "LegalQAEval")
+train_and_evaluate("unsloth/mistral-7b-instruct-v0.3-bnb-4bit", pubmedqa_dataset, "mistral_qlora_pubmedqa",True, "QLoRA", "PubMedQA")
+train_and_evaluate("unsloth/mistral-7b-instruct-v0.3-bnb-4bit", medquad_dataset, "mistral_qlora_medquad",True, "QLoRA", "MedQUAD")
+train_and_evaluate("unsloth/mistral-7b-instruct-v0.3-bnb-4bit", legalqaeval_dataset, "mistral_qlora_legalqaeval",True, "QLoRA", "LegalQAEval")

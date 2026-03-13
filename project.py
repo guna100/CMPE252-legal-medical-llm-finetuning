@@ -231,3 +231,273 @@ def run_rouge_evaluation(model, tokenizer, dataset_name, num_samples=50):
     # 6. Compute ROUGE
     results = rouge.compute(predictions=preds, references=refs)
     return results
+
+##Set up training and evaluation loop
+
+##Functions to print metrics and charts
+def print_metrics(metrics, model, ft_type, dataset):
+  print(f"Metrics for {model} and {ft_type} trained on {dataset} dataset")
+
+  print(f"\n\nBaseline Average F1 Score:")
+  print(f"\nPubMedQA F1: {metrics['bl_f1_pubmedqa']:.4f}")
+  print(f"\nMedQUAD F1: {metrics['bl_f1_medquad']:.4f}")
+  print(f"\nLegalQAEval F1: {metrics['bl_f1_legalqaeval']:.4f}")
+  print(f"\nPubMedQA ROUGE (L): {metrics['bl_rouge_pubmedqa']['rougeL']:.4f}")
+  print(f"\nMedQUAD ROUGE (L): {metrics['bl_rouge_medquad']['rougeL']:.4f}")
+  print(f"\nLegalQAEval ROUGE (L): {metrics['bl_rouge_legalqaeval']['rougeL']:.4f}")
+
+  print(f"\n\nFinetuned Average F1 Score:")
+  print(f"\nEPubMedQA F1: {metrics['ft_f1_pubmedqa']:.4f}")
+  print(f"\nMedQUAD F1: {metrics['ft_f1_medquad']:.4f}")
+  print(f"\nLegalQAEval F1: {metrics['ft_f1_legalqaeval']:.4f}")
+  print(f"\nEPubMedQA ROUGE (L): {metrics['ft_rouge_pubmedqa']['rougeL']:.4f}")
+  print(f"\nMedQUAD ROUGE (L): {metrics['ft_rouge_medquad']['rougeL']:.4f}")
+  print(f"\nLegalQAEval ROUGE (L): {metrics['ft_rouge_legalqaeval']['rougeL']:.4f}")
+
+  print(f"\n\nImprovements after Supervised Fine Tuning:")
+  print(f"\n PubMedQA F1: {(metrics['ft_f1_pubmedqa'] - metrics['bl_f1_pubmedqa'])/ metrics['bl_f1_pubmedqa']*100:.2f}%")
+  print(f"\n MedQUAD F1: {(metrics['ft_f1_medquad'] - metrics['bl_f1_medquad'])/ metrics['bl_f1_medquad']*100:.2f}%")
+  print(f"\n LegalQAEval F1: {(metrics['ft_f1_legalqaeval'] - metrics['bl_f1_legalqaeval'])/ metrics['bl_f1_legalqaeval']*100:.2f}%")
+  print(f"\n PubMedQA ROUGE (L): {(metrics['ft_rouge_pubmedqa']['rougeL'] - metrics['bl_rouge_pubmedqa']['rougeL'])/ metrics['bl_rouge_pubmedqa']['rougeL']*100:.2f}%")
+  print(f"\n MedQUAD ROUGE (L): {(metrics['ft_rouge_medquad']['rougeL'] - metrics['bl_rouge_medquad']['rougeL'])/ metrics['bl_rouge_medquad']['rougeL']*100:.2f}%")
+  print(f"\n LegalQAEval ROUGE (L): {(metrics['ft_rouge_legalqaeval']['rougeL'] - metrics['bl_rouge_legalqaeval']['rougeL'])/ metrics['bl_rouge_legalqaeval']['rougeL']*100:.2f}%")
+
+def plot_metrics_comparison(metrics, model, ft_type, dataset):
+    # The datasets we evaluated
+    datasets = ['PubMedQA', 'MedQUAD', 'LegalQAEval']
+
+    # Extract F1 scores
+    bl_f1 = [metrics['bl_f1_pubmedqa'], metrics['bl_f1_medquad'], metrics['bl_f1_legalqaeval']]
+    ft_f1 = [metrics['ft_f1_pubmedqa'], metrics['ft_f1_medquad'], metrics['ft_f1_legalqaeval']]
+
+    # Extract ROUGE-L scores (remembering to grab the 'rougeL' key from the evaluate dict)
+    bl_rouge = [
+        metrics['bl_rouge_pubmedqa']['rougeL'],
+        metrics['bl_rouge_medquad']['rougeL'],
+        metrics['bl_rouge_legalqaeval']['rougeL']
+    ]
+    ft_rouge = [
+        metrics['ft_rouge_pubmedqa']['rougeL'],
+        metrics['ft_rouge_medquad']['rougeL'],
+        metrics['ft_rouge_legalqaeval']['rougeL']
+    ]
+
+    # Chart setup
+    x = np.arange(len(datasets))
+    width = 0.35  # width of the bars
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+    fig.suptitle(f"Performance Comparison: {model} with {ft_type} trained on {dataset}", fontsize=16, fontweight='bold')
+
+    # --- Plot 1: F1 Scores ---
+    rects1 = ax1.bar(x - width/2, bl_f1, width, label='Baseline', color='#4C72B0')
+    rects2 = ax1.bar(x + width/2, ft_f1, width, label='Finetuned', color='#55A868')
+    ax1.set_ylabel('F1 Score', fontsize=12)
+    ax1.set_title('F1 Score: Baseline vs Finetuned', fontsize=14)
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(datasets, fontsize=11)
+    ax1.legend()
+    ax1.set_ylim(0, max(max(bl_f1), max(ft_f1)) * 1.2) # Give headroom for labels
+
+    # --- Plot 2: ROUGE-L Scores ---
+    rects3 = ax2.bar(x - width/2, bl_rouge, width, label='Baseline', color='#4C72B0')
+    rects4 = ax2.bar(x + width/2, ft_rouge, width, label='Finetuned', color='#55A868')
+    ax2.set_ylabel('ROUGE-L Score', fontsize=12)
+    ax2.set_title('ROUGE-L Score: Baseline vs Finetuned', fontsize=14)
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(datasets, fontsize=11)
+    ax2.legend()
+    ax2.set_ylim(0, max(max(bl_rouge), max(ft_rouge)) * 1.2)
+
+    # Helper function to attach text labels above each bar
+    def autolabel(ax, rects):
+        for rect in rects:
+            height = rect.get_height()
+            ax.annotate(f'{height:.2f}',
+                        xy=(rect.get_x() + rect.get_width() / 2, height),
+                        xytext=(0, 3),  # 3 points vertical offset
+                        textcoords="offset points",
+                        ha='center', va='bottom', fontsize=10)
+
+    # Apply labels to all bars
+    autolabel(ax1, rects1)
+    autolabel(ax1, rects2)
+    autolabel(ax2, rects3)
+    autolabel(ax2, rects4)
+
+    # Render the chart cleanly
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_percentage_improvements(metrics, model, ft_type, dataset):
+    datasets = ['PubMedQA', 'MedQUAD', 'LegalQAEval']
+
+    # 1. Calculate F1 Improvements ((Finetuned - Baseline) / Baseline * 100)
+    f1_imp = [
+        (metrics['ft_f1_pubmedqa'] - metrics['bl_f1_pubmedqa']) / metrics['bl_f1_pubmedqa'] * 100,
+        (metrics['ft_f1_medquad'] - metrics['bl_f1_medquad']) / metrics['bl_f1_medquad'] * 100,
+        (metrics['ft_f1_legalqaeval'] - metrics['bl_f1_legalqaeval']) / metrics['bl_f1_legalqaeval'] * 100
+    ]
+
+    # 2. Calculate ROUGE-L Improvements
+    rouge_imp = [
+        (metrics['ft_rouge_pubmedqa']['rougeL'] - metrics['bl_rouge_pubmedqa']['rougeL']) / metrics['bl_rouge_pubmedqa']['rougeL'] * 100,
+        (metrics['ft_rouge_medquad']['rougeL'] - metrics['bl_rouge_medquad']['rougeL']) / metrics['bl_rouge_medquad']['rougeL'] * 100,
+        (metrics['ft_rouge_legalqaeval']['rougeL'] - metrics['bl_rouge_legalqaeval']['rougeL']) / metrics['bl_rouge_legalqaeval']['rougeL'] * 100
+    ]
+
+    x = np.arange(len(datasets))
+    width = 0.35
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    fig.suptitle(f"Relative Improvement After Fine-Tuning\n({model} with {ft_type}) on {dataset}", fontsize=16, fontweight='bold')
+
+    # 3. Plot the bars
+    rects1 = ax.bar(x - width/2, f1_imp, width, label='F1 Improvement (%)', color='#2ca02c') # Green
+    rects2 = ax.bar(x + width/2, rouge_imp, width, label='ROUGE-L Improvement (%)', color='#ff7f0e') # Orange
+
+    # 4. Formatting
+    ax.set_ylabel('Improvement (%)', fontsize=12)
+    ax.set_xticks(x)
+    ax.set_xticklabels(datasets, fontsize=12)
+    ax.legend()
+
+    # Draw a solid line at 0% to anchor the chart
+    ax.axhline(0, color='black', linewidth=1.2)
+
+    # 5. Helper function to attach percentage text labels (+ and - aware)
+    def autolabel(rects):
+        for rect in rects:
+            height = rect.get_height()
+            # If negative, place the text below the bar
+            va = 'bottom' if height >= 0 else 'top'
+            offset = 3 if height >= 0 else -3
+
+            ax.annotate(f'{height:+.2f}%',
+                        xy=(rect.get_x() + rect.get_width() / 2, height),
+                        xytext=(0, offset),
+                        textcoords="offset points",
+                        ha='center', va=va, fontsize=10, fontweight='bold')
+
+    autolabel(rects1)
+    autolabel(rects2)
+
+    # Dynamically scale the y-axis so labels don't get cut off
+    all_vals = f1_imp + rouge_imp
+    y_max = max(max(all_vals) * 1.2, 5) # Minimum 5% ceiling
+    y_min = min(min(all_vals) * 1.2, 0) # Floor at 0 or lowest negative
+    ax.set_ylim(y_min, y_max)
+
+    plt.tight_layout()
+    plt.show()
+##set up trainer
+from trl import SFTConfig, SFTTrainer
+def set_trainer(model, tokenizer, dataset):
+  return SFTTrainer(
+    model = model,
+    tokenizer = tokenizer,
+    train_dataset = dataset,
+    dataset_text_field = "text",
+    max_seq_length = max_seq_length,
+    packing = False, # Can make training 5x faster for short sequences.
+    args = SFTConfig(
+        per_device_train_batch_size = 2,
+        gradient_accumulation_steps = 4,
+        warmup_steps = 5,
+        max_steps = 60,
+        # num_train_epochs = 1, # For longer training runs!
+        learning_rate = 2e-4,
+        logging_steps = 1,
+        optim = "adamw_8bit",
+        weight_decay = 0.001,
+        lr_scheduler_type = "linear",
+        seed = 3407,
+        output_dir = "outputs",
+        report_to = "none", # Use TrackIO/WandB etc
+    ),
+)
+
+from unsloth import FastLanguageModel, apply_chat_template
+max_seq_length = 2048
+dtype = None # None for auto detection. Float16 for Tesla T4, V100, Bfloat16 for Ampere+
+
+##training and evaluation loop
+def train_domain_expert(model, dataset, output_adapter_name, qlora ):
+    if not qlora: max_sequence_lenght = 1024  # Reduce memory usage on GPU by reducing sequence length for LoRA
+    metrics = {}
+    print(f"--- Starting training for {output_adapter_name} ---")
+
+    # Load a fresh instance of the base model
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name = model,
+        max_seq_length = max_seq_length,
+        dtype = dtype,
+        load_in_4bit = qlora,
+        load_in_16bit = not qlora
+    )
+
+    # Attach your LoRA configuration
+    model = FastLanguageModel.get_peft_model(
+        model,
+        r = 16, # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
+        target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
+                          "gate_proj", "up_proj", "down_proj"],
+        lora_alpha = 16 if qlora else 32,
+        lora_dropout = 0,
+        bias = "none",
+        use_gradient_checkpointing = "unsloth",
+        random_state = 3407,
+        use_rslora = False,
+        loftq_config = None,
+    )
+
+    # Apply chat template
+    dataset = apply_chat_template(
+    dataset,
+    tokenizer = tokenizer,
+    chat_template = chat_template,
+    # default_system_message = "You are a helpful assistant", << [OPTIONAL]
+)
+    # Gather test sets of 50
+    test_set_pubmedqa = pubmedqa_dataset.shuffle(seed=42).select(range(50))
+    test_set_medquad = medquad_dataset.shuffle(seed=42).select(range(50))
+    test_set_legalqaeval = legalqaeval_dataset.shuffle(seed=42).select(range(50))
+    # # Get Baseline metrics
+    metrics["bl_f1_pubmedqa"] = run_f1_evaluation(model, tokenizer, test_set_pubmedqa, True)
+    metrics["bl_f1_medquad"] =run_f1_evaluation(model, tokenizer, test_set_medquad , True)
+    metrics["bl_f1_legalqaeval"] = run_f1_evaluation(model, tokenizer, test_set_legalqaeval, True)
+    metrics["bl_rouge_pubmedqa"] = run_rouge_evaluation(model, tokenizer, "scientific_papers", 50)
+    metrics["bl_rouge_medquad"] =run_rouge_evaluation(model, tokenizer, "scientific_papers", 50)
+    metrics["bl_rouge_legalqaeval"] = run_rouge_evaluation(model, tokenizer, "billsum", 50)
+
+    #Train the model
+    trainer = set_trainer(model, tokenizer, dataset)
+    trainer.train()
+
+    # Get finetuned metrics
+    metrics["ft_f1_pubmedqa"] = run_f1_evaluation(model, tokenizer, test_set_pubmedqa, True)
+    metrics["ft_f1_medquad"] =run_f1_evaluation(model, tokenizer, test_set_medquad , True)
+    metrics["ft_f1_legalqaeval"] = run_f1_evaluation(model, tokenizer, test_set_legalqaeval, True)
+    metrics["ft_rouge_pubmedqa"] = run_rouge_evaluation(model, tokenizer, "scientific_papers", 50)
+    metrics["ft_rouge_medquad"] =run_rouge_evaluation(model, tokenizer, "scientific_papers", 50)
+    metrics["ft_rouge_legalqaeval"] = run_rouge_evaluation(model, tokenizer, "billsum", 50)
+    # Save ONLY the tiny LoRA adapter (this is what you push to Hugging Face later)
+    model.save_pretrained(output_adapter_name)
+    tokenizer.save_pretrained(output_adapter_name)
+
+    # Nuke the model from VRAM and flush the cache!
+    del model
+    del tokenizer
+    del trainer
+    gc.collect()
+    torch.cuda.empty_cache()
+    print(f"--- Finished {output_adapter_name}. VRAM cleared! ---")
+    return metrics
+
+##function to train and print metrics 
+def train_and_evaluate(model, dataset,output_adapter_name, qlora, ft_type, dataset_str ):
+  metrics = train_domain_expert(model, dataset, output_adapter_name, qlora)
+  print_metrics(metrics, model, ft_type, dataset_str)
+  plot_metrics_comparison(metrics, model, ft_type, dataset_str)
+  plot_percentage_improvements(metrics, model, ft_type, dataset_str)

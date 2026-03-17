@@ -1,0 +1,1 @@
+Code and experiments for domain adaptation of open-source language models to legal and medical text using instruction-based supervised fine-tuning and LoRA, evaluated on question answering and text generation tasks.
